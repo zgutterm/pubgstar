@@ -76,13 +76,15 @@ def main():
         yesterday_formatted = yesterday.format("2006-01-02")
         print(yesterday_formatted)
         print(today)
-        new_report = False
-        if ((yesterday_formatted in timeArray) or (today in timeArray)):
+        reportColor = "#000000"
+        if (yesterday_formatted in timeArray):
             print("New PUBG REPORT")
-            new_report = True
+            reportColor = "#FFFF00"
+        elif (today in timeArray):
+            reportColor = "#FF0000"
         else:
             print("No recent pubg report")
-            new_report = False
+            reportColor = "#000000"
 
     # kd = (int)kills / ((int)rounds - (int)wins)
     kd = kills/ losses
@@ -96,98 +98,56 @@ def main():
     print(avg_dmg_str)
 
     win_percent = int(math.round((wins/rounds) * 100))
-    if new_report:
-        return render.Root(
-          child = render.Column (
-            cross_align="center",
-            main_align="center",
-            expanded = True,
-            children = [
-                render.Row(
-                    children = [
-                        render.Text("%d Wins "%(wins)),
-                        render.Text("(%d%%)"%(win_percent), color="#b434eb")
-                    ]
-                ),
-                render.Row(
-                    children = [
-                        render.Text("K/D",color="#FF0000", font="tom-thumb"),
-                        render.Text("%s " % (kd_str), font="tom-thumb"),
-                        render.Text("AD", color="#FFFF00", font="tom-thumb"),
-                        render.Text("%s" % (avg_dmg_str), font="tom-thumb"),
-                    ]
-                ),
-                render.Marquee(
-                    width=64,
-                    # offset_start = 0,
-                    # offset_end = 32,
-                    child=render.Row( # Row lays out its children horizontally
-                        children = [
-                            render.Text("K", color="#FF0000", font="tom-thumb"),
-                            render.Text("%d " % kills, font="tom-thumb"),
-                            render.Text("HS", color="#fc9403", font="tom-thumb"),
-                            render.Text("%d " % headshot_kills, font="tom-thumb"),
-                            render.Text("D", color="#FFFF00", font="tom-thumb"),
-                            render.Text("%d " % damage, font="tom-thumb"),
-                            render.Text("A", color="#00FF00", font="tom-thumb"),
-                            render.Text("%d" % assists, font="tom-thumb"),
-                        ],
-                    )
-                ),
-                render.Row(
-                    main_align="end",
-                    cross_align="end",
-                    expanded=True,
-                    children=
-                        [render.Circle(
-                        color="#FF0000",
-                        diameter=1
-                        
-                    )] 
- 
-                )
-            ]
-        )
-        
-    )
     return render.Root(
         child = render.Column (
-            cross_align="center",
-            main_align="center",
-            expanded = True,
-            children = [
-                # render.Image(src=BTC_ICON,height=12),  
-                render.Row(
+        cross_align="center",
+        main_align="center",
+        expanded = True,
+        children = [
+            render.Row(
+                children = [
+                    render.Text("%d Wins "%(wins)),
+                    render.Text("(%d%%)"%(win_percent), color="#b434eb")
+                ]
+            ),
+            render.Row(
+                children = [
+                    render.Text("K/D",color="#FF0000", font="tom-thumb"),
+                    render.Text("%s " % (kd_str), font="tom-thumb"),
+                    render.Text("AD", color="#FFFF00", font="tom-thumb"),
+                    render.Text("%s" % (avg_dmg_str), font="tom-thumb"),
+                ]
+            ),
+            render.Marquee(
+                width=64,
+                # offset_start = 0,
+                # offset_end = 32,
+                child=render.Row( # Row lays out its children horizontally
                     children = [
-                        render.Text("%d Wins "%(wins)),
-                        render.Text("(%d%%)"%(win_percent), color="#b434eb")
-                    ]
-                ),
-                render.Row(
-                    children = [
-                        render.Text("K/D",color="#FF0000", font="tom-thumb"),
-                        render.Text("%s " % (kd_str), font="tom-thumb"),
-                        render.Text("AD", color="#FFFF00", font="tom-thumb"),
-                        render.Text("%s" % (avg_dmg_str), font="tom-thumb"),
-                    ]
-                ),
-                render.Marquee(
-                    width=64,
-                    # offset_start = 0,
-                    # offset_end = 32,
-                    child=render.Row( # Row lays out its children horizontally
-                        children = [
-                            render.Text("K", color="#FF0000", font="tom-thumb"),
-                            render.Text("%d " % kills, font="tom-thumb"),
-                            render.Text("HS", color="#fc9403", font="tom-thumb"),
-                            render.Text("%d " % headshot_kills, font="tom-thumb"),
-                            render.Text("D", color="#FFFF00", font="tom-thumb"),
-                            render.Text("%d " % damage, font="tom-thumb"),
-                            render.Text("A", color="#00FF00", font="tom-thumb"),
-                            render.Text("%d" % assists, font="tom-thumb"),
-                        ],
-                    )
+                        render.Text("K", color="#FF0000", font="tom-thumb"),
+                        render.Text("%d " % kills, font="tom-thumb"),
+                        render.Text("HS", color="#fc9403", font="tom-thumb"),
+                        render.Text("%d " % headshot_kills, font="tom-thumb"),
+                        render.Text("D", color="#FFFF00", font="tom-thumb"),
+                        render.Text("%d " % damage, font="tom-thumb"),
+                        render.Text("A", color="#00FF00", font="tom-thumb"),
+                        render.Text("%d" % assists, font="tom-thumb"),
+                    ],
                 )
-            ]
-        )
+            ),
+            render.Row(
+                main_align="end",
+                cross_align="end",
+                expanded=True,
+                children=
+                    [render.Circle(
+                    color=reportColor,
+                    diameter=1
+                    
+                )] 
+
+            )
+        ]
     )
+    
+)
