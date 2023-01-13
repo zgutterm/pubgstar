@@ -72,7 +72,7 @@ def main():
         today = now.format("2006-01-02")
         oneday = time.parse_duration("24h")
         yesterday = now - oneday
-        
+
         yesterday_formatted = yesterday.format("2006-01-02")
         print(yesterday_formatted)
         print(today)
@@ -139,12 +139,12 @@ def main():
                 main_align="end",
                 cross_align="end",
                 expanded=True,
-                children=
-                    [render.Circle(
+                children=[
+                    render.Circle(
                     color=reportColor,
                     diameter=1
-                    
-                )] 
+                    )
+                ] 
 
             )
         ]
