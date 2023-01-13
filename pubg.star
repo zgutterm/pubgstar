@@ -72,7 +72,7 @@ def main():
         today = now.format("2006-01-02")
         oneday = time.parse_duration("24h")
         yesterday = now - oneday
-        
+
         yesterday_formatted = yesterday.format("2006-01-02")
         print(yesterday_formatted)
         print(today)
@@ -141,14 +141,11 @@ def main():
                     children=
                         [render.Circle(
                         color="#FF0000",
-                        diameter=1
-                        
-                    )] 
- 
+                        diameter=2
+                    )]
                 )
             ]
         )
-        
     )
     return render.Root(
         child = render.Column (
@@ -156,7 +153,7 @@ def main():
             main_align="center",
             expanded = True,
             children = [
-                # render.Image(src=BTC_ICON,height=12),  
+                # render.Image(src=BTC_ICON,height=12),
                 render.Row(
                     children = [
                         render.Text("%d Wins "%(wins)),
