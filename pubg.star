@@ -30,7 +30,7 @@ def main():
         print("Miss! Calling API")
         rep = http.get(LIFETIME_URL, headers = {
         'Accept': 'application/vnd.api+json',
-        'Authorization': 'Bearer <TOKENHERE>'
+        'Authorization': 'Bearer <changeme>'
         })
         if rep.status_code != 200:
             fail("PUBG API Failed %d", rep.status_code)
@@ -51,8 +51,7 @@ def main():
         cache.set("assists", str(int(assists)), ttl_seconds=240)
 
         pubgresp = http.get(PUBG_REPORT_URL, headers = {
-        'Accept': 'application/vnd.api+json',
-        'Authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJiN2IyODMwMC1lNTJlLTAxMzYtNjEwYS00ZjFjMTU0ZDcwZTEiLCJpc3MiOiJnYW1lbG9ja2VyIiwiaWF0IjoxNTQ1MTYzNzU1LCJwdWIiOiJibHVlaG9sZSIsInRpdGxlIjoicHViZyIsImFwcCI6InB1YmdmcmllbmRzIn0.INISNxfhgJgGY-0vAMBxQlYrQjL9u_5Ngob31Qr5zog'
+        'Accept': 'application/vnd.api+json'
         })
         if pubgresp.status_code != 200:
             fail("PUBG API Failed %d", pubgresp.status_code)
@@ -62,6 +61,7 @@ def main():
         for k in keys:
             # print(pubgresp.json([k][0]["TimeEvent"]))
             foundTime = pubgresp.json()[k][0]["TimeEvent"]
+            foundTime = foundTime[0:10]
             timeArray.append(foundTime)
         # matchId = keys[0]
         # print(matchId)
@@ -70,12 +70,24 @@ def main():
         print(timeArray)
         now = time.now()
         today = now.format("2006-01-02")
+        oneday = time.parse_duration("24h")
+        yesterday = now - oneday
+        
+        yesterday_formatted = yesterday.format("2006-01-02")
+        print(yesterday_formatted)
         print(today)
+        new_report = False
+        if ((yesterday_formatted in timeArray) or (today in timeArray)):
+            print("New PUBG REPORT")
+            new_report = True
+        else:
+            print("No recent pubg report")
+            new_report = False
 
     # kd = (int)kills / ((int)rounds - (int)wins)
     kd = kills/ losses
     kd_str = str(int(math.round(kd * 100)))
-    kd_str = (kd_str[0:-2] + "." + kd_str[-1:])
+    kd_str = (kd_str[0:-2] + "." + kd_str[-2:])
     print(kd_str)
 
     avg_dmg = damage / rounds
@@ -84,14 +96,67 @@ def main():
     print(avg_dmg_str)
 
     win_percent = int(math.round((wins/rounds) * 100))
-
+    if new_report:
+        return render.Root(
+          child = render.Column (
+            cross_align="center",
+            main_align="center",
+            expanded = True,
+            children = [
+                render.Row(
+                    children = [
+                        render.Text("%d Wins "%(wins)),
+                        render.Text("(%d%%)"%(win_percent), color="#b434eb")
+                    ]
+                ),
+                render.Row(
+                    children = [
+                        render.Text("K/D",color="#FF0000", font="tom-thumb"),
+                        render.Text("%s " % (kd_str), font="tom-thumb"),
+                        render.Text("AD", color="#FFFF00", font="tom-thumb"),
+                        render.Text("%s" % (avg_dmg_str), font="tom-thumb"),
+                    ]
+                ),
+                render.Marquee(
+                    width=64,
+                    # offset_start = 0,
+                    # offset_end = 32,
+                    child=render.Row( # Row lays out its children horizontally
+                        children = [
+                            render.Text("K", color="#FF0000", font="tom-thumb"),
+                            render.Text("%d " % kills, font="tom-thumb"),
+                            render.Text("HS", color="#fc9403", font="tom-thumb"),
+                            render.Text("%d " % headshot_kills, font="tom-thumb"),
+                            render.Text("D", color="#FFFF00", font="tom-thumb"),
+                            render.Text("%d " % damage, font="tom-thumb"),
+                            render.Text("A", color="#00FF00", font="tom-thumb"),
+                            render.Text("%d" % assists, font="tom-thumb"),
+                        ],
+                    )
+                ),
+                render.Row(
+                    main_align="end",
+                    cross_align="end",
+                    expanded=True,
+                    children=
+                        [render.Circle(
+                        color="#FF0000",
+                        diameter=1
+                        
+                    )] 
+ 
+                )
+            ]
+        )
+        
+    )
     return render.Root(
         child = render.Column (
             cross_align="center",
             main_align="center",
             expanded = True,
             children = [
-                # render.Image(src=BTC_ICON,height=12),
+                # render.Image(src=BTC_ICON,height=12),  
                 render.Row(
                     children = [
                         render.Text("%d Wins "%(wins)),
