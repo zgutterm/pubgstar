@@ -428,10 +428,6 @@ def main(config):
             print("No recent pubg report")
             reportColor = "#000000"
 
-    if new_report:
-        diameter = 2
-    else:
-        diameter = 0
     # kd = (int)kills / ((int)rounds - (int)wins)
     kd = kills/ losses
     kd_str = str(int(math.round(kd * 100)))
@@ -493,8 +489,8 @@ def main(config):
                     expanded=True,
                     children=
                         [render.Circle(
-                        color="#FF0000",
-                        diameter=diameter
+                        color=reportColor,
+                        diameter=2
                     )]
                 )
             ]
