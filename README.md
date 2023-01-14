@@ -4,7 +4,7 @@
 
 ## Serve the app for local development
 
-`pixlet serve pubg.star username=heelsfan23r mode=duo platform=xbox pubg_api_key=yourPUBGAPIKey`
+`pixlet serve pubg.star username=WackyJacky101 mode=solo_fpp platform=steam pubg_api_key=yourPUBGAPIKey`
 
 ## Rendering the app for deployment
 
