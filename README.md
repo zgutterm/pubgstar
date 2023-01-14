@@ -2,6 +2,8 @@
 
 [Pixlet](https://github.com/tidbyt/pixlet) app to see your PUBG statistics on your [Tidbyt](https://tidbyt.com/)
 
+![Example Render](pubg.gif "Example Render of the app")
+
 ## Serve the app for local development
 
 `pixlet serve pubg.star username=WackyJacky101 mode=solo_fpp platform=steam pubg_api_key=yourPUBGAPIKey`
