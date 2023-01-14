@@ -475,7 +475,7 @@ def main(config):
                     main_align = "center",
                     cross_align="center",
                     children = [
-                        render.Image(src=PUBG_LOGO,height=10),
+                        render.Image(src=PUBG_LOGO,height=8),
                         render.Text("%s" % playerName, font="tom-thumb")
                     ]
                 ),
