@@ -380,6 +380,8 @@ def main(config):
                 current_season = season["id"]
                 print(current_season)
                 cache.set("current_season", current_season, ttl_seconds=600)
+    else:
+        current_season = str(current_season_cached)
 
     if (wins_cached != None) and (headshot_kills_cached != None):
         print("Hit! Displaying cached data.")
