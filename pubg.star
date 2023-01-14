@@ -340,7 +340,6 @@ def main(config):
     platform = config.get("platform", DEFAULT_PLATFORM)
     mode = config.get("mode", DEFAULT_GAME_MODE)
     pubg_api_bearer_token = config.get("pubg_api_key", DEFAULT_BEARER_TOKEN)
-    print(mode)
     pubg_api_headers = { 'Accept': 'application/vnd.api+json','Authorization': 'Bearer %s' % pubg_api_bearer_token }
 
     playerId_cached = cache.get("playerId")
@@ -353,17 +352,22 @@ def main(config):
     losses_cached = cache.get("losses")
     current_season_cached = cache.get("current_season")
 
-    if playerId_cached == None:
+    print(current_season_cached)
+    if (playerId_cached == None):
         print("Looking up player")
         player_id_url = FIND_PLAYER_URL.replace("$playerName", playerName).replace("$platform", platform)
         player_id_rep = http.get(player_id_url, headers = pubg_api_headers)
         if player_id_rep.status_code != 200:
-            fail("PUBG API Failed %d" % rep.status_code, rep.status_code)
+            fail("PUBG API Failed %d" % player_id_rep.status_code, player_id_rep.status_code)
 
         playerId = player_id_rep.json()["data"][0]["id"]
         cache.set("playerId", playerId, ttl_seconds=600)
         print(playerId)
 
+    else:
+        playerId = str(playerId_cached)
+    
+    if (current_season_cached == None):
         platform_seasons_url = PUBG_SEASSON_URL.replace("$platform", platform)
         platform_seasons_rep = http.get(platform_seasons_url, headers = pubg_api_headers)
         if platform_seasons_rep.status_code != 200:
@@ -376,9 +380,6 @@ def main(config):
                 current_season = season["id"]
                 print(current_season)
                 cache.set("current_season", current_season, ttl_seconds=600)
-
-    else:
-        playerId = str(playerId_cached)
 
     if (wins_cached != None) and (headshot_kills_cached != None):
         print("Hit! Displaying cached data.")
@@ -423,14 +424,9 @@ def main(config):
         print(keys)
         timeArray = []
         for k in keys:
-            # print(pubgresp.json([k][0]["TimeEvent"]))
             foundTime = pubgresp.json()[k][0]["TimeEvent"]
             foundTime = foundTime[0:10]
             timeArray.append(foundTime)
-        # matchId = keys[0]
-        # print(matchId)
-        # last = pubgresp.json()[matchId][0]["TimeEvent"]
-        # print(last)
         print(timeArray)
         now = time.now()
         today = now.format("2006-01-02")
@@ -458,13 +454,17 @@ def main(config):
     kd_str = str(int(math.round(kd * 100)))
     kd_str = (kd_str[0:-2] + "." + kd_str[-2:])
     print(kd_str)
-
-    avg_dmg = damage / rounds
+    if rounds > 0:
+        avg_dmg = damage / rounds
+        win_percent = int(math.round((wins/rounds) * 100))
+    else:
+        avg_dmg = 0
+        win_percent = 0
     avg_dmg_str  = str(int(math.round(avg_dmg * 100)))
     avg_dmg_str = (avg_dmg_str[0:-2])
     print(avg_dmg_str)
 
-    win_percent = int(math.round((wins/rounds) * 100))
+   
     return render.Root(
         child = render.Column (
             cross_align="center",
