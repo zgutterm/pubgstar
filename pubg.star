@@ -342,15 +342,15 @@ def main(config):
     pubg_api_bearer_token = config.get("pubg_api_key", DEFAULT_BEARER_TOKEN)
     pubg_api_headers = { 'Accept': 'application/vnd.api+json','Authorization': 'Bearer %s' % pubg_api_bearer_token }
 
-    playerId_cached = cache.get("playerId")
-    wins_cached = cache.get("wins")
-    kills_cached = cache.get("kills")
-    headshot_kills_cached = cache.get("headshot_kills")
-    damage_cached = cache.get("damage")
-    rounds_cached = cache.get("rounds")
-    assists_cached = cache.get("assists")
-    losses_cached = cache.get("losses")
-    current_season_cached = cache.get("current_season")
+    playerId_cached = cache.get("playerId" + playerName)
+    wins_cached = cache.get("wins" + playerName)
+    kills_cached = cache.get("kills" + playerName)
+    headshot_kills_cached = cache.get("headshot_kills" + playerName)
+    damage_cached = cache.get("damage" + playerName)
+    rounds_cached = cache.get("rounds" + playerName)
+    assists_cached = cache.get("assists" + playerName)
+    losses_cached = cache.get("losses" + playerName)
+    current_season_cached = cache.get("current_season" + playerName)
 
     print(current_season_cached)
     if (playerId_cached == None):
@@ -361,7 +361,7 @@ def main(config):
             fail("PUBG API Failed %d" % player_id_rep.status_code, player_id_rep.status_code)
 
         playerId = player_id_rep.json()["data"][0]["id"]
-        cache.set("playerId", playerId, ttl_seconds=600)
+        cache.set("playerId" + playerName, playerId, ttl_seconds=600)
         print(playerId)
 
     else:
@@ -379,7 +379,7 @@ def main(config):
             if season["attributes"]["isCurrentSeason"]:
                 current_season = season["id"]
                 print(current_season)
-                cache.set("current_season", current_season, ttl_seconds=600)
+                cache.set("current_season" + playerName, current_season, ttl_seconds=600)
     else:
         current_season = str(current_season_cached)
 
@@ -401,19 +401,19 @@ def main(config):
 
         print(rep.json()["data"]["attributes"])
         wins = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["wins"]
-        cache.set("wins", str(int(wins)), ttl_seconds=240)
+        cache.set("wins" + playerName, str(int(wins)), ttl_seconds=240)
         kills = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["kills"]
-        cache.set("kills", str(int(kills)), ttl_seconds=240)
+        cache.set("kills" + playerName, str(int(kills)), ttl_seconds=240)
         headshot_kills = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["headshotKills"]
-        cache.set("kills", str(int(headshot_kills)), ttl_seconds=240)
+        cache.set("kills" + playerName, str(int(headshot_kills)), ttl_seconds=240)
         damage = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["damageDealt"]
-        cache.set("damage", str(int(damage)), ttl_seconds=240)
+        cache.set("damage" + playerName, str(int(damage)), ttl_seconds=240)
         rounds = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["roundsPlayed"]
-        cache.set("rounds", str(int(rounds)), ttl_seconds=240)
+        cache.set("rounds" + playerName, str(int(rounds)), ttl_seconds=240)
         losses = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["losses"]
-        cache.set("losses", str(int(rounds)), ttl_seconds=240)
+        cache.set("losses" + playerName, str(int(rounds)), ttl_seconds=240)
         assists = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["assists"]
-        cache.set("assists", str(int(assists)), ttl_seconds=240)
+        cache.set("assists" + playerName, str(int(assists)), ttl_seconds=240)
 
 
         pubg_report_url_for_player = PUBG_REPORT_URL.replace("$playerId", playerId)
