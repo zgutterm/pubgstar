@@ -329,6 +329,8 @@ PUBG_REPORT_URL = "https://api.pubg.report/v1/players/$playerId/streams"
 DEFAULT_USERNAME = "heelsfan23r"
 DEFAULT_PLATFORM = "xbox"
 
+BEARER_TOKEN = "change me"
+
 def main(config):
     playerName = config.get("username", DEFAULT_USERNAME)
     platform = config.get("platform", DEFAULT_PLATFORM)
@@ -346,7 +348,7 @@ def main(config):
         player_id_url = FIND_PLAYER_URL.replace("$playerName", playerName).replace("$platform", platform)
         player_id_rep = http.get(player_id_url, headers = {
         'Accept': 'application/vnd.api+json',
-        'Authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJkMTkzZjlhMC03NGRjLTAxM2ItZDFlNi01NTgwNTcyNDkwOTUiLCJpc3MiOiJnYW1lbG9ja2VyIiwiaWF0IjoxNjczNTUxNTM4LCJwdWIiOiJibHVlaG9sZSIsInRpdGxlIjoicHViZyIsImFwcCI6Ii01Zjg1YmY3NS0zNzQxLTQ0NjEtODNkYS1lNmUyODA5MjNjYTYifQ.YY3_xJS_Vt6I8Y_D5CoSD90beQS4wlxP0ZcevTy10gQ'
+        'Authorization': 'Bearer %s' % BEARER_TOKEN
         })
         if player_id_rep.status_code != 200:
             fail("PUBG API Failed %d" % rep.status_code, rep.status_code)
@@ -370,7 +372,7 @@ def main(config):
         lifetime_url_for_player = LIFETIME_URL.replace("$playerId", playerId)
         rep = http.get(lifetime_url_for_player, headers = {
         'Accept': 'application/vnd.api+json',
-        'Authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJkMTkzZjlhMC03NGRjLTAxM2ItZDFlNi01NTgwNTcyNDkwOTUiLCJpc3MiOiJnYW1lbG9ja2VyIiwiaWF0IjoxNjczNTUxNTM4LCJwdWIiOiJibHVlaG9sZSIsInRpdGxlIjoicHViZyIsImFwcCI6Ii01Zjg1YmY3NS0zNzQxLTQ0NjEtODNkYS1lNmUyODA5MjNjYTYifQ.YY3_xJS_Vt6I8Y_D5CoSD90beQS4wlxP0ZcevTy10gQ'
+        'Authorization': 'Bearer %s' % BEARER_TOKEN
         })
         if rep.status_code != 200:
             fail("PUBG API Failed %d" % rep.status_code, rep.status_code)
