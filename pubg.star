@@ -323,17 +323,26 @@ dI9ylBHLX7b43HMrg6hMIDjUaf0PuIJeGlhjvTsAAAAASUVORK5CYII=
 """)
 
 FIND_PLAYER_URL = "https://api.pubg.com/shards/$platform/players?filter[playerNames]=$playerName"
-LIFETIME_URL = "https://api.pubg.com/shards/xbox-na/players/$playerId/seasons/division.bro.official.console-21"
+LIFETIME_URL = "https://api.pubg.com/shards/$platform/players/$playerId/seasons/$season"
 PUBG_REPORT_URL = "https://api.pubg.report/v1/players/$playerId/streams"
+PUBG_SEASSON_URL = "https://api.pubg.com/shards/$platform/seasons"
 
 DEFAULT_USERNAME = "heelsfan23r"
 DEFAULT_PLATFORM = "xbox"
+DEFAULT_GAME_MODE = "duo"
 
-BEARER_TOKEN = "change me"
+DEFAULT_BEARER_TOKEN = "changeme"
+
+
 
 def main(config):
     playerName = config.get("username", DEFAULT_USERNAME)
     platform = config.get("platform", DEFAULT_PLATFORM)
+    mode = config.get("mode", DEFAULT_GAME_MODE)
+    pubg_api_bearer_token = config.get("pubg_api_key", DEFAULT_BEARER_TOKEN)
+    print(mode)
+    pubg_api_headers = { 'Accept': 'application/vnd.api+json','Authorization': 'Bearer %s' % pubg_api_bearer_token }
+
     playerId_cached = cache.get("playerId")
     wins_cached = cache.get("wins")
     kills_cached = cache.get("kills")
@@ -342,19 +351,32 @@ def main(config):
     rounds_cached = cache.get("rounds")
     assists_cached = cache.get("assists")
     losses_cached = cache.get("losses")
+    current_season_cached = cache.get("current_season")
 
     if playerId_cached == None:
         print("Looking up player")
         player_id_url = FIND_PLAYER_URL.replace("$playerName", playerName).replace("$platform", platform)
-        player_id_rep = http.get(player_id_url, headers = {
-        'Accept': 'application/vnd.api+json',
-        'Authorization': 'Bearer %s' % BEARER_TOKEN
-        })
+        player_id_rep = http.get(player_id_url, headers = pubg_api_headers)
         if player_id_rep.status_code != 200:
             fail("PUBG API Failed %d" % rep.status_code, rep.status_code)
 
         playerId = player_id_rep.json()["data"][0]["id"]
         cache.set("playerId", playerId, ttl_seconds=600)
+        print(playerId)
+
+        platform_seasons_url = PUBG_SEASSON_URL.replace("$platform", platform)
+        platform_seasons_rep = http.get(platform_seasons_url, headers = pubg_api_headers)
+        if platform_seasons_rep.status_code != 200:
+            fail("PUBG API Failed %d" % platform_seasons_rep.status_code, platform_seasons_rep.status_code)
+
+        seasons = platform_seasons_rep.json()["data"]
+        for season in seasons:
+            # print(season)
+            if season["attributes"]["isCurrentSeason"]:
+                current_season = season["id"]
+                print(current_season)
+                cache.set("current_season", current_season, ttl_seconds=600)
+
     else:
         playerId = str(playerId_cached)
 
@@ -369,27 +391,25 @@ def main(config):
         losses = int(losses_cached)
     else:
         print("Miss! Calling API")
-        lifetime_url_for_player = LIFETIME_URL.replace("$playerId", playerId)
-        rep = http.get(lifetime_url_for_player, headers = {
-        'Accept': 'application/vnd.api+json',
-        'Authorization': 'Bearer %s' % BEARER_TOKEN
-        })
+        lifetime_url_for_player = LIFETIME_URL.replace("$playerId", playerId).replace("$season", current_season).replace("$platform", platform)
+        rep = http.get(lifetime_url_for_player, headers = pubg_api_headers)
         if rep.status_code != 200:
             fail("PUBG API Failed %d" % rep.status_code, rep.status_code)
 
-        wins = rep.json()["data"]["attributes"]["gameModeStats"]["duo"]["wins"]
+        print(rep.json()["data"]["attributes"])
+        wins = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["wins"]
         cache.set("wins", str(int(wins)), ttl_seconds=240)
-        kills = rep.json()["data"]["attributes"]["gameModeStats"]["duo"]["kills"]
+        kills = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["kills"]
         cache.set("kills", str(int(kills)), ttl_seconds=240)
-        headshot_kills = rep.json()["data"]["attributes"]["gameModeStats"]["duo"]["headshotKills"]
+        headshot_kills = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["headshotKills"]
         cache.set("kills", str(int(headshot_kills)), ttl_seconds=240)
-        damage = rep.json()["data"]["attributes"]["gameModeStats"]["duo"]["damageDealt"]
+        damage = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["damageDealt"]
         cache.set("damage", str(int(damage)), ttl_seconds=240)
-        rounds = rep.json()["data"]["attributes"]["gameModeStats"]["duo"]["roundsPlayed"]
+        rounds = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["roundsPlayed"]
         cache.set("rounds", str(int(rounds)), ttl_seconds=240)
-        losses = rep.json()["data"]["attributes"]["gameModeStats"]["duo"]["losses"]
+        losses = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["losses"]
         cache.set("losses", str(int(rounds)), ttl_seconds=240)
-        assists = rep.json()["data"]["attributes"]["gameModeStats"]["duo"]["assists"]
+        assists = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["assists"]
         cache.set("assists", str(int(assists)), ttl_seconds=240)
 
 
@@ -431,7 +451,10 @@ def main(config):
             reportColor = "#000000"
 
     # kd = (int)kills / ((int)rounds - (int)wins)
-    kd = kills/ losses
+    if losses > 0:
+        kd = kills/ losses
+    else:
+        kd = 0
     kd_str = str(int(math.round(kd * 100)))
     kd_str = (kd_str[0:-2] + "." + kd_str[-2:])
     print(kd_str)
@@ -449,6 +472,8 @@ def main(config):
             expanded = True,
             children = [
                 render.Row(
+                    main_align = "center",
+                    cross_align="center",
                     children = [
                         render.Image(src=PUBG_LOGO,height=10),
                         render.Text("%s" % playerName, font="tom-thumb")
@@ -500,6 +525,32 @@ def main(config):
     )
 
 def get_schema():
+    mode_options = [
+        schema.Option(
+            display = "Solo",
+            value = "solo",
+        ),
+        schema.Option(
+            display = "Solo FPP",
+            value = "solo-fpp",
+        ),
+        schema.Option(
+            display = "Duos",
+            value = "duo",
+        ),
+        schema.Option(
+            display = "Duos FPP",
+            value = "duo-fpp",
+        ),
+        schema.Option(
+            display = "Squads",
+            value = "squad",
+        ),
+        schema.Option(
+            display = "Squads FPP",
+            value = "squad-fpp",
+        ),
+    ]
     platform_options = [
         schema.Option(
             display = "Steam",
@@ -538,6 +589,12 @@ def get_schema():
                 icon = "computer",
                 default = platform_options[0].value,
                 options = platform_options,
-            )
+            ),
+            schema.Text(
+                id = "pubg_api_key",
+                name = "PUBG API Key",
+                desc = "What is your PUBG API Key (see https://developer.pubg.com/)?",
+                icon = "key",
+            ),
         ],
     )
