@@ -51,6 +51,8 @@ FIND_PLAYER_URL = "https://api.pubg.com/shards/$platform/players?filter[playerNa
 LIFETIME_URL = "https://api.pubg.com/shards/$platform/players/$playerId/seasons/$season"
 PUBG_REPORT_URL = "https://api.pubg.report/v1/players/$playerId/streams"
 PUBG_SEASON_URL = "https://api.pubg.com/shards/$platform/seasons"
+PUBG_RECENT_MATCH_URL = "https://api.pubg.com/shards/$platform/players/$playerId"
+PUBG_RECENT_MATCH_DATA_URL = "https://api.pubg.com/shards/$platform/matches/$matchId"
 
 DEFAULT_USERNAME = "heelsfan23r"
 DEFAULT_PLATFORM = "xbox"
@@ -76,8 +78,9 @@ def main(config):
     assists_cached = cache.get("assists" + playerName)
     losses_cached = cache.get("losses" + playerName)
     current_season_cached = cache.get("current_season" + playerName)
+    recent_match_cached = cache.get("recent_match" + playerName)
+    win_place_cached = cache.get("win_place" + playerName)
 
-    print(current_season_cached)
     if (playerId_cached == None):
         print("Looking up player")
         player_id_url = FIND_PLAYER_URL.replace("$playerName", playerName).replace("$platform", platform)
@@ -108,6 +111,34 @@ def main(config):
     else:
         current_season = str(current_season_cached)
 
+    if (recent_match_cached == None):
+        recent_pubg_url = PUBG_RECENT_MATCH_URL.replace("$playerId", playerId).replace("$platform", platform)
+        print(recent_pubg_url)
+        recent_rep = http.get(recent_pubg_url, headers = pubg_api_headers)
+        if recent_rep.status_code != 200:
+            fail("PUBG API Failed %d" % recent_rep.status_code)
+        matches = recent_rep.json()["data"]["relationships"]["matches"]["data"][0]["id"]
+        print("Recent Match:")
+        print(matches)
+        cache.set("recent_match" + playerName, matches, ttl_seconds=600)
+        recent_pubg_match_url = PUBG_RECENT_MATCH_DATA_URL.replace("$matchId", matches).replace("$platform", platform)
+        match_data_rep = http.get(recent_pubg_match_url, headers = pubg_api_headers)
+        if match_data_rep.status_code != 200:
+            fail("PUBG API Failed %d" % match_data_rep.status_code)
+        matchData = match_data_rep.json()["included"]
+        win_place = 0
+        for participant in matchData:
+            if (participant["type"] == "participant"):
+                if (participant["attributes"]["stats"]["playerId"]) and participant["attributes"]["stats"]["playerId"] == playerId:
+                    win_place = participant["attributes"]["stats"]["winPlace"]
+        print(win_place)
+        cache.set("win_place" + playerName, str(int(win_place)), ttl_seconds=600)
+
+    else:
+        recent_match = str(recent_match_cached)
+        win_place = int(win_place_cached)
+
+
     if (wins_cached != None) and (headshot_kills_cached != None):
         print("Hit! Displaying cached data.")
         wins = int(wins_cached)
@@ -124,7 +155,6 @@ def main(config):
         if rep.status_code != 200:
             fail("PUBG API Failed %d" % rep.status_code, rep.status_code)
 
-        print(rep.json()["data"]["attributes"])
         wins = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["wins"]
         cache.set("wins" + playerName, str(int(wins)), ttl_seconds=240)
         kills = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["kills"]
@@ -190,7 +220,13 @@ def main(config):
     avg_dmg_str  = str(int(math.round(avg_dmg * 100)))
     avg_dmg_str = (avg_dmg_str[0:-2])
     print(avg_dmg_str)
-
+    print(win_place)
+    if (win_place == 1):
+        print("Chicken Dinner!!")
+        IMG_LOGO = CHICKEN_LOGO
+    else:
+        IMG_LOGO = PUBG_LOGO
+    
    
     return render.Root(
         child = render.Column (
@@ -202,7 +238,7 @@ def main(config):
                     main_align = "center",
                     cross_align="center",
                     children = [
-                        render.Image(src=PUBG_LOGO,height=8),
+                        render.Image(src=IMG_LOGO,height=8),
                         render.Text("%s" % playerName, font="tom-thumb")
                     ]
                 ),
