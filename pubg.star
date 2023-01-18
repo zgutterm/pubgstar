@@ -5,6 +5,7 @@ load("schema.star", "schema")
 load ("math.star", "math")
 load("encoding/base64.star", "base64")
 load("time.star", "time")
+load("secret.star", "secret")
 
 PUBG_LOGO = base64.decode("""
 iVBORw0KGgoAAAANSUhEUgAAALgAAABcCAYAAADd5n9TAAAAAXNSR0IArs4c6QAACWBJREFUeF7tnU2sJUMUx/8jw2MlsSAZm7EhLEl8S7yRGJuRsGJBSHxsZkJY+FpgwbAgZGbDSAgLNkjYIGEkPkfCkrBhMxIWEgvhIUaq3+37+var7vqfU1V9q/ueuxpedVWdc371r1Pndvfdga3Pica/U/5zR6uz9jjtv2vHls4/1bja+fZdJ7Ul1Rxy+mQomxZsaP5HrgkY4HL8csUiNJPpA75xNO
@@ -58,57 +59,82 @@ DEFAULT_USERNAME = "heelsfan23r"
 DEFAULT_PLATFORM = "xbox"
 DEFAULT_GAME_MODE = "duo"
 
-DEFAULT_BEARER_TOKEN = "changeme"
+DEFAULT_BEARER_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI2YzlhYWI1MC03NWUzLTAxM2ItYWJlYi02M2VlYzM4Yjc5ZTIiLCJpc3MiOiJnYW1lbG9ja2VyIiwiaWF0IjoxNjczNjY0MzI2LCJwdWIiOiJibHVlaG9sZSIsInRpdGxlIjoicHViZyIsImFwcCI6Ii0xZmU2ZGExOC1mN2RhLTRkMjMtYWYzMC0zYTJiNDYwZWM4ODgifQ.2U1hYTKQ7-oexw0afmhucIdNnPd_yAQLiYUv75S3dDw"
 
+# 3 hours to cache data the doesn't change much
+LONG_CACHE_TIME = 60 * 60 * 3
 
+# 4 minutes to cache data that does change more often
+SHORT_CACHE_TIME = 60 * 4
 
 def main(config):
+
+    #Initialize everything to 0
+    wins = 0
+    kills = 0
+    headshot_kills = 0
+    damage = 0
+    rounds = 0
+    assists = 0
+    losses = 0
+    report_color = "#000000"
+
+    # Set options from the config
     playerName = config.get("username", DEFAULT_USERNAME)
     platform = config.get("platform", DEFAULT_PLATFORM)
     mode = config.get("mode", DEFAULT_GAME_MODE)
     pubg_api_bearer_token = config.get("pubg_api_key", DEFAULT_BEARER_TOKEN)
     pubg_api_headers = { 'Accept': 'application/vnd.api+json','Authorization': 'Bearer %s' % pubg_api_bearer_token }
 
-    playerId_cached = cache.get("playerId" + playerName)
-    wins_cached = cache.get("wins" + playerName)
-    kills_cached = cache.get("kills" + playerName)
-    headshot_kills_cached = cache.get("headshot_kills" + playerName)
-    damage_cached = cache.get("damage" + playerName)
-    rounds_cached = cache.get("rounds" + playerName)
-    assists_cached = cache.get("assists" + playerName)
-    losses_cached = cache.get("losses" + playerName)
-    current_season_cached = cache.get("current_season" + playerName)
-    recent_match_cached = cache.get("recent_match" + playerName)
-    win_place_cached = cache.get("win_place" + playerName)
+    # Cache data that is not specific to a certain mode
+    player_specific_cache_key = playerName + platform
+    print(player_specific_cache_key)
+    playerId_cached = cache.get("playerId" + player_specific_cache_key)
+    current_season_cached = cache.get("current_season" + player_specific_cache_key)
+    report_color_cached = cache.get("report_color" + player_specific_cache_key)
+
+    # Mode specific stats
+    mode_specific_cache_key = player_specific_cache_key + mode
+    print(mode_specific_cache_key)
+    wins_cached = cache.get("wins" + mode_specific_cache_key)
+    kills_cached = cache.get("kills" + mode_specific_cache_key)
+    headshot_kills_cached = cache.get("headshot_kills" + mode_specific_cache_key)
+    damage_cached = cache.get("damage" + mode_specific_cache_key)
+    rounds_cached = cache.get("rounds" + mode_specific_cache_key)
+    assists_cached = cache.get("assists" + mode_specific_cache_key)
+    losses_cached = cache.get("losses" + mode_specific_cache_key)
+    recent_match_cached = cache.get("recent_match" + mode_specific_cache_key)
+    win_place_cached = cache.get("win_place" + mode_specific_cache_key)
 
     if (playerId_cached == None):
         print("Looking up player")
         player_id_url = FIND_PLAYER_URL.replace("$playerName", playerName).replace("$platform", platform)
         player_id_rep = http.get(player_id_url, headers = pubg_api_headers)
         if player_id_rep.status_code != 200:
-            fail("PUBG API Failed %d" % player_id_rep.status_code, player_id_rep.status_code)
+            fail("PUBG API Failed %d for %s" % (player_id_rep.status_code, player_id_url))
 
         playerId = player_id_rep.json()["data"][0]["id"]
-        cache.set("playerId" + playerName, playerId, ttl_seconds=600)
+        cache.set("playerId" + player_specific_cache_key, playerId, ttl_seconds=LONG_CACHE_TIME)
         print(playerId)
 
     else:
         playerId = str(playerId_cached)
-    
+
     if (current_season_cached == None):
+        print("Looking up seasons for "+ player_specific_cache_key)
         platform_seasons_url = PUBG_SEASON_URL.replace("$platform", platform)
         platform_seasons_rep = http.get(platform_seasons_url, headers = pubg_api_headers)
         if platform_seasons_rep.status_code != 200:
-            fail("PUBG API Failed %d" % platform_seasons_rep.status_code, platform_seasons_rep.status_code)
+            fail("PUBG API Failed %d for %s" % (platform_seasons_rep.status_code, platform_seasons_url))
 
         seasons = platform_seasons_rep.json()["data"]
         for season in seasons:
-            # print(season)
             if season["attributes"]["isCurrentSeason"]:
                 current_season = season["id"]
-                print(current_season)
-                cache.set("current_season" + playerName, current_season, ttl_seconds=600)
+                print("Current seasons is " + current_season)
+                cache.set("current_season" + player_specific_cache_key, current_season, ttl_seconds=LONG_CACHE_TIME)
     else:
+        print("Using cached data for season " + current_season_cached)
         current_season = str(current_season_cached)
 
     if (recent_match_cached == None):
@@ -120,7 +146,7 @@ def main(config):
         matches = recent_rep.json()["data"]["relationships"]["matches"]["data"][0]["id"]
         print("Recent Match:")
         print(matches)
-        cache.set("recent_match" + playerName, matches, ttl_seconds=600)
+        cache.set("recent_match" + mode_specific_cache_key, matches, ttl_seconds=600)
         recent_pubg_match_url = PUBG_RECENT_MATCH_DATA_URL.replace("$matchId", matches).replace("$platform", platform)
         match_data_rep = http.get(recent_pubg_match_url, headers = pubg_api_headers)
         if match_data_rep.status_code != 200:
@@ -132,7 +158,7 @@ def main(config):
                 if (participant["attributes"]["stats"]["playerId"]) and participant["attributes"]["stats"]["playerId"] == playerId:
                     win_place = participant["attributes"]["stats"]["winPlace"]
         print(win_place)
-        cache.set("win_place" + playerName, str(int(win_place)), ttl_seconds=600)
+        cache.set("win_place" + mode_specific_cache_key, str(int(win_place)), ttl_seconds=600)
 
     else:
         recent_match = str(recent_match_cached)
@@ -148,27 +174,28 @@ def main(config):
         rounds = int(rounds_cached)
         assists = int(assists_cached)
         losses = int(losses_cached)
+        report_color = str(report_color_cached)
     else:
         print("Miss! Calling API")
         lifetime_url_for_player = LIFETIME_URL.replace("$playerId", playerId).replace("$season", current_season).replace("$platform", platform)
         rep = http.get(lifetime_url_for_player, headers = pubg_api_headers)
         if rep.status_code != 200:
-            fail("PUBG API Failed %d" % rep.status_code, rep.status_code)
+            fail("PUBG API Failed %d for %s" % (rep.status_code, lifetime_url_for_player))
 
         wins = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["wins"]
-        cache.set("wins" + playerName, str(int(wins)), ttl_seconds=240)
+        cache.set("wins" + mode_specific_cache_key, str(int(wins)), ttl_seconds=SHORT_CACHE_TIME)
         kills = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["kills"]
-        cache.set("kills" + playerName, str(int(kills)), ttl_seconds=240)
+        cache.set("kills" + mode_specific_cache_key, str(int(kills)), ttl_seconds=SHORT_CACHE_TIME)
         headshot_kills = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["headshotKills"]
-        cache.set("kills" + playerName, str(int(headshot_kills)), ttl_seconds=240)
+        cache.set("headshot_kills" + mode_specific_cache_key, str(int(headshot_kills)), ttl_seconds=SHORT_CACHE_TIME)
         damage = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["damageDealt"]
-        cache.set("damage" + playerName, str(int(damage)), ttl_seconds=240)
+        cache.set("damage" + mode_specific_cache_key, str(int(damage)), ttl_seconds=SHORT_CACHE_TIME)
         rounds = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["roundsPlayed"]
-        cache.set("rounds" + playerName, str(int(rounds)), ttl_seconds=240)
+        cache.set("rounds" + mode_specific_cache_key, str(int(rounds)), ttl_seconds=SHORT_CACHE_TIME)
         losses = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["losses"]
-        cache.set("losses" + playerName, str(int(rounds)), ttl_seconds=240)
+        cache.set("losses" + mode_specific_cache_key, str(int(rounds)), ttl_seconds=SHORT_CACHE_TIME)
         assists = rep.json()["data"]["attributes"]["gameModeStats"]["%s" % mode]["assists"]
-        cache.set("assists" + playerName, str(int(assists)), ttl_seconds=240)
+        cache.set("assists" + mode_specific_cache_key, str(int(assists)), ttl_seconds=SHORT_CACHE_TIME)
 
 
         pubg_report_url_for_player = PUBG_REPORT_URL.replace("$playerId", playerId)
@@ -176,7 +203,7 @@ def main(config):
         'Accept': 'application/vnd.api+json'
         })
         if pubgresp.status_code != 200:
-            fail("PUBG API Failed %d" % pubgresp.status_code, pubgresp.status_code)
+            fail("PUBG API Failed %d for %s" % (pubgresp.status_code, pubg_report_url_for_player))
         keys = pubgresp.json().keys()
         print(keys)
         timeArray = []
@@ -193,23 +220,24 @@ def main(config):
         yesterday_formatted = yesterday.format("2006-01-02")
         print(yesterday_formatted)
         print(today)
-        reportColor = "#000000"
+        report_color = "#000000"
         if (yesterday_formatted in timeArray):
             print("New PUBG REPORT")
-            reportColor = "#FFFF00"
+            report_color = "#FFFF00"
         elif (today in timeArray):
-            reportColor = "#FF0000"
+            report_color = "#FF0000"
         else:
             print("No recent pubg report")
-            reportColor = "#000000"
+            report_color = "#000000"
+        cache.set("report_color" + player_specific_cache_key, report_color, ttl_seconds=SHORT_CACHE_TIME)
 
-    # kd = (int)kills / ((int)rounds - (int)wins)
     if losses > 0:
         kd = kills/ losses
+        kd_str = str(int(math.round(kd * 100)))
+        kd_str = (kd_str[0:-2] + "." + kd_str[-2:])
     else:
         kd = 0
-    kd_str = str(int(math.round(kd * 100)))
-    kd_str = (kd_str[0:-2] + "." + kd_str[-2:])
+        kd_str = "0"
     print(kd_str)
     if rounds > 0:
         avg_dmg = damage / rounds
@@ -227,7 +255,6 @@ def main(config):
     else:
         IMG_LOGO = PUBG_LOGO
     
-   
     return render.Root(
         child = render.Column (
             cross_align="center",
@@ -237,14 +264,15 @@ def main(config):
                 render.Row(
                     main_align = "center",
                     cross_align="center",
+                    expanded = True,
                     children = [
-                        render.Image(src=IMG_LOGO,height=8),
-                        render.Text("%s" % playerName, font="tom-thumb")
-                    ]
+                        render.Image(src=IMG_LOGO,height=7),
+                        render.Text(" %s" % mode, font="tom-thumb")                    ]
                 ),
                 render.Row(
                     children = [
-                        render.Text("%d Wins "%(wins)),
+                        render.Text("%d"%(wins), color = "#039dfc"),
+                        render.Text(" Wins"),
                         render.Text("(%d%%)"%(win_percent), color="#b434eb")
                     ]
                 ),
@@ -274,17 +302,16 @@ def main(config):
                     )
                 ),
                 render.Row(
-                    main_align="end",
-                    cross_align="end",
+                    main_align="center",
+                    # cross_align="end",
                     expanded=True,
-                    children=
-                        [render.Circle(
-                        color=reportColor,
-                        diameter=2
-                    )]
+                    children= [
+                        render.Text("%s" % playerName[0:14], font="CG-pixel-3x5-mono", color="#039dfc"),
+                        render.Circle(color=report_color,diameter=2)
+                    ]
                 )
             ]
-        )
+        ),
     )
 
 def get_schema():
